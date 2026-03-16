@@ -2,8 +2,10 @@ import "server-only";
 
 import type {
   AwardSearchRequest,
+  AwardItineraryFingerprint,
   BookableProgramHint,
   Cabin,
+  FlightSegmentFingerprint,
   ProviderTripRecord,
   SupportedSourceProgram,
   SearchCandidate,
@@ -108,14 +110,63 @@ function uniqueStrings(values: string[]) {
   return [...new Set(values.filter(Boolean))];
 }
 
-function extractOperatingCarriers(entry: Record<string, unknown>) {
-  const segments = readArray(entry, "AvailabilitySegments")
+function splitFlightNumber(value: string | null) {
+  const normalized = (value ?? "").trim().toUpperCase();
+  const match = normalized.match(/^([A-Z0-9]{2,3})\s*([0-9A-Z]+)$/);
+
+  if (!match) {
+    return {
+      marketingCarrier: normalized.replace(/[^A-Z]/g, ""),
+      flightNumber: normalized.replace(/[^0-9A-Z]/g, ""),
+    };
+  }
+
+  return {
+    marketingCarrier: match[1],
+    flightNumber: match[2],
+  };
+}
+
+function extractSegments(entry: Record<string, unknown>): FlightSegmentFingerprint[] {
+  return readArray(entry, "AvailabilitySegments")
     .map((segment) => expectObject(segment))
-    .filter((segment): segment is Record<string, unknown> => segment !== null);
-  const carriersFromSegments = segments
-    .map((segment) => readString(segment, ["FlightNumber"]))
-    .filter((value): value is string => Boolean(value))
-    .map((flightNumber) => flightNumber.split(/\s+/)[0]?.replace(/[0-9].*$/, "") ?? "")
+    .filter((segment): segment is Record<string, unknown> => segment !== null)
+    .map((segment) => {
+      const rawFlightNumber =
+        readString(segment, ["FlightNumber", "MarketingFlightNumber", "OperatingFlightNumber"]) ??
+        "";
+      const { marketingCarrier, flightNumber } = splitFlightNumber(rawFlightNumber);
+
+      return {
+        marketingCarrier:
+          readString(segment, ["MarketingCarrier", "MarketingCarrierCode"]) ?? marketingCarrier,
+        operatingCarrier:
+          readString(segment, ["OperatingCarrier", "OperatingCarrierCode"]) ?? null,
+        flightNumber,
+        originAirport:
+          readString(segment, ["OriginAirport", "DepartureAirport", "FromAirport"]) ?? "",
+        destinationAirport:
+          readString(segment, ["DestinationAirport", "ArrivalAirport", "ToAirport"]) ?? "",
+        departureTime: readString(segment, ["DepartsAt", "DepartureTime", "DepartureDateTime"]) ?? "",
+        arrivalTime:
+          readString(segment, ["ArrivesAt", "ArrivalTime", "ArrivalDateTime"]) ?? null,
+      };
+    })
+    .filter(
+      (segment) =>
+        Boolean(
+          segment.marketingCarrier &&
+            segment.flightNumber &&
+            segment.originAirport &&
+            segment.destinationAirport &&
+            segment.departureTime,
+        ),
+    );
+}
+
+function extractOperatingCarriers(entry: Record<string, unknown>) {
+  const carriersFromSegments = extractSegments(entry)
+    .map((segment) => segment.operatingCarrier ?? segment.marketingCarrier)
     .map((carrier) => carrier.trim())
     .filter(Boolean);
 
@@ -243,9 +294,16 @@ export class SeatsAeroAwardSearchProvider implements AwardSearchProvider {
       .map((entry) => {
         const taxesCurrency = readString(entry, ["TaxesCurrency"]) ?? "USD";
         const operatingCarriers = extractOperatingCarriers(entry);
+        const segments = extractSegments(entry);
+        const itineraryFingerprint: AwardItineraryFingerprint = {
+          tripId: readString(entry, ["ID"]) ?? tripId,
+          segmentCount: segments.length,
+          stopCount: Math.max(0, segments.length - 1),
+          segments,
+        };
 
         return {
-          tripId: readString(entry, ["ID"]) ?? tripId,
+          tripId: itineraryFingerprint.tripId,
           origin: readString(entry, ["OriginAirport"]) ?? "",
           destination: readString(entry, ["DestinationAirport"]) ?? "",
           departureDate: readString(entry, ["DepartsAt", "Date"]) ?? "",
@@ -259,6 +317,7 @@ export class SeatsAeroAwardSearchProvider implements AwardSearchProvider {
           stops: readNumber(entry, ["Stops"]) ?? 0,
           durationMinutes: readNumber(entry, ["TotalDuration"]) ?? 0,
           remainingSeats: readNumber(entry, ["RemainingSeats"]) ?? null,
+          segments,
           operatingCarriers,
           bookablePrograms,
           freshness: "cached" as const,

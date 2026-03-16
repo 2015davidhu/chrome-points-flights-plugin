@@ -87,6 +87,17 @@ function trip(tripId: string, sourceProgramRaw: string): ProviderTripRecord {
     stops: 0,
     durationMinutes: 470,
     remainingSeats: 2,
+    segments: [
+      {
+        marketingCarrier: "LX",
+        operatingCarrier: "LX",
+        flightNumber: "18",
+        originAirport: "JFK",
+        destinationAirport: "ZRH",
+        departureTime: "2026-06-03T19:30:00Z",
+        arrivalTime: "2026-06-04T06:20:00Z",
+      },
+    ],
     operatingCarriers: ["LX"],
     bookablePrograms: [
       {

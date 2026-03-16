@@ -149,6 +149,13 @@ export function normalizeTripRecord(record: ProviderTripRecord): NormalizedAward
     stops: record.stops,
     durationMinutes: record.durationMinutes,
     remainingSeats: record.remainingSeats,
+    itineraryFingerprint: {
+      tripId: record.tripId,
+      segmentCount: record.segments.length,
+      stopCount:
+        record.segments.length > 0 ? Math.max(0, record.segments.length - 1) : record.stops,
+      segments: record.segments,
+    },
     operatingCarriers: record.operatingCarriers ?? [],
     bookablePrograms: record.bookablePrograms ?? [],
     partnerBookingType: inferPartnerBookingType(

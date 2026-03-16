@@ -23,6 +23,22 @@ const mockResponse: AwardSearchResponse = {
       stops: 0,
       durationMinutes: 470,
       remainingSeats: 2,
+      itineraryFingerprint: {
+        tripId: "trip-1",
+        segmentCount: 1,
+        stopCount: 0,
+        segments: [
+          {
+            marketingCarrier: "LX",
+            operatingCarrier: "LX",
+            flightNumber: "18",
+            originAirport: "JFK",
+            destinationAirport: "ZRH",
+            departureTime: "2026-06-03T19:30:00Z",
+            arrivalTime: "2026-06-04T06:20:00Z",
+          },
+        ],
+      },
       operatingCarriers: ["ANA"],
       bookablePrograms: [
         {
@@ -72,6 +88,22 @@ const mockResponse: AwardSearchResponse = {
       stops: 0,
       durationMinutes: 485,
       remainingSeats: 1,
+      itineraryFingerprint: {
+        tripId: "trip-2",
+        segmentCount: 1,
+        stopCount: 0,
+        segments: [
+          {
+            marketingCarrier: "UA",
+            operatingCarrier: "UA",
+            flightNumber: "923",
+            originAirport: "JFK",
+            destinationAirport: "ZRH",
+            departureTime: "2026-06-04T18:40:00Z",
+            arrivalTime: "2026-06-05T06:45:00Z",
+          },
+        ],
+      },
       operatingCarriers: ["UA"],
       bookablePrograms: [
         {

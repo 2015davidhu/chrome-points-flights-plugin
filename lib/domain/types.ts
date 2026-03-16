@@ -32,6 +32,12 @@ export const PARTNER_BOOKING_TYPES = [
   "same_program_partner_metal",
   "alt_programs_observed",
 ] as const;
+export const EXTENSION_MATCH_STATUSES = [
+  "matched",
+  "no_match",
+  "insufficient_identity",
+  "unsupported",
+] as const;
 
 export type WalletCurrency = (typeof WALLET_CURRENCIES)[number];
 export type Cabin = (typeof CABINS)[number];
@@ -39,6 +45,7 @@ export type TransferSpeedBucket = (typeof TRANSFER_SPEED_BUCKETS)[number];
 export type SortMode = (typeof SORT_MODES)[number];
 export type SupportedSourceProgram = (typeof SOURCE_PROGRAMS)[number];
 export type PartnerBookingType = (typeof PARTNER_BOOKING_TYPES)[number];
+export type ExtensionMatchStatus = (typeof EXTENSION_MATCH_STATUSES)[number];
 export type WalletBalances = Record<WalletCurrency, number>;
 export type WalletValuations = Record<WalletCurrency, number>;
 
@@ -65,6 +72,40 @@ export type SearchCandidate = {
   tripId: string;
 };
 
+export type FlightSegmentFingerprint = {
+  marketingCarrier: string;
+  operatingCarrier?: string | null;
+  flightNumber: string;
+  originAirport: string;
+  destinationAirport: string;
+  departureTime: string;
+  arrivalTime?: string | null;
+};
+
+export type PageItineraryFingerprint = {
+  segmentCount: number;
+  stopCount: number;
+  segments: FlightSegmentFingerprint[];
+};
+
+export type AwardItineraryFingerprint = PageItineraryFingerprint & {
+  tripId: string;
+};
+
+export type ExtensionSearchContext = {
+  origin: string;
+  destination: string;
+  departureDate: string;
+  cabin?: Cabin;
+};
+
+export type ExtensionMatchRequest = {
+  searchContext: ExtensionSearchContext;
+  itineraryFingerprint: PageItineraryFingerprint;
+  walletBalances: WalletBalances;
+  walletValuations?: Partial<WalletValuations>;
+};
+
 export type ProviderTripRecord = {
   tripId: string;
   origin: string;
@@ -80,6 +121,7 @@ export type ProviderTripRecord = {
   stops: number;
   durationMinutes: number;
   remainingSeats: number | null;
+  segments: FlightSegmentFingerprint[];
   operatingCarriers: string[];
   bookablePrograms: BookableProgramHint[];
   freshness: "cached";
@@ -112,6 +154,7 @@ export type NormalizedAward = {
   stops: number;
   durationMinutes: number;
   remainingSeats: number | null;
+  itineraryFingerprint: AwardItineraryFingerprint;
   operatingCarriers: string[];
   bookablePrograms: BookableProgramHint[];
   partnerBookingType: PartnerBookingType;
@@ -153,6 +196,12 @@ export type AwardSearchResponse = {
   meta: SearchMeta;
 };
 
+export type ExtensionMatchResponse = {
+  matchStatus: ExtensionMatchStatus;
+  matchedAwards: RankedAwardResult[];
+  meta: SearchMeta;
+};
+
 export const DEFAULT_WALLET_BALANCES: WalletBalances = {
   amex_mr: 40000,
   chase_ur: 35000,
@@ -175,4 +224,38 @@ export const SEARCH_REQUEST_SCHEMA = z.object({
   }),
   reachableOnly: z.boolean(),
   sort: z.enum(SORT_MODES),
+});
+
+const FLIGHT_SEGMENT_FINGERPRINT_SCHEMA = z.object({
+  marketingCarrier: z.string().trim().min(1),
+  operatingCarrier: z.string().trim().min(1).nullable().optional(),
+  flightNumber: z.string().trim().min(1),
+  originAirport: z.string().trim().length(3).regex(/^[A-Z]{3}$/),
+  destinationAirport: z.string().trim().length(3).regex(/^[A-Z]{3}$/),
+  departureTime: z.string().trim().min(1),
+  arrivalTime: z.string().trim().min(1).nullable().optional(),
+});
+
+export const EXTENSION_MATCH_REQUEST_SCHEMA = z.object({
+  searchContext: z.object({
+    origin: z.string().trim().length(3).regex(/^[A-Z]{3}$/),
+    destination: z.string().trim().length(3).regex(/^[A-Z]{3}$/),
+    departureDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    cabin: z.enum(CABINS).optional(),
+  }),
+  itineraryFingerprint: z.object({
+    segmentCount: z.number().int().min(1),
+    stopCount: z.number().int().min(0),
+    segments: z.array(FLIGHT_SEGMENT_FINGERPRINT_SCHEMA).min(1),
+  }),
+  walletBalances: z.object({
+    amex_mr: z.number().int().min(0),
+    chase_ur: z.number().int().min(0),
+  }),
+  walletValuations: z
+    .object({
+      amex_mr: z.number().min(0).max(10).optional(),
+      chase_ur: z.number().min(0).max(10).optional(),
+    })
+    .optional(),
 });

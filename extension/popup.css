@@ -1,0 +1,58 @@
+body {
+  margin: 0;
+  background: #f7f3e9;
+  color: #1f241f;
+  font: 15px/1.4 Georgia, serif;
+}
+
+.shell {
+  width: 320px;
+  padding: 16px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 1.6rem;
+}
+
+.lede {
+  margin: 0 0 12px;
+  color: #5d6158;
+}
+
+form {
+  display: grid;
+  gap: 10px;
+}
+
+label {
+  display: grid;
+  gap: 4px;
+  font: 700 12px/1.2 "Trebuchet MS", sans-serif;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+input {
+  padding: 10px 12px;
+  border: 1px solid rgba(31, 36, 31, 0.16);
+  border-radius: 12px;
+  font: 15px/1.2 Georgia, serif;
+}
+
+button {
+  margin-top: 6px;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 999px;
+  background: #15543d;
+  color: white;
+  font: 700 13px/1 "Trebuchet MS", sans-serif;
+  cursor: pointer;
+}
+
+.status {
+  min-height: 18px;
+  margin: 10px 0 0;
+  color: #5d6158;
+}
